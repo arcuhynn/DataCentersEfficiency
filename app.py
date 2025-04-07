@@ -42,10 +42,22 @@ if uploaded_file:
 
     df['Recomendaciones'] = df.apply(generar_recomendaciones, axis=1)
 
+    # Generar semáforo de eficiencia
+    def clasificar_eficiencia(row):
+        n_recs = len(row['Recomendaciones'])
+        if "Consumo energético aceptable." in row['Recomendaciones']:
+            return "🟢 Eficiente"
+        elif n_recs <= 2:
+            return "🟡 Medio"
+        else:
+            return "🔴 Crítico"
+
+    df['Semaforo'] = df.apply(clasificar_eficiencia, axis=1)
+
     # Mostrar resultados
     st.subheader("Resultados y Recomendaciones")
     st.dataframe(df[['Power_kWh', 'CO2_per_kWh', 'Power_per_Age', 'Temp_efficiency_ratio',
-                     'Cost_per_kWh', 'CPU_CO2_ratio', 'RAM_CO2_ratio', 'Recomendaciones']])
+                     'Cost_per_kWh', 'CPU_CO2_ratio', 'RAM_CO2_ratio', 'Recomendaciones', 'Semaforo']])
 
     # Visualizar recomendaciones
     st.subheader("Visualización de Recomendaciones Generadas")
@@ -61,10 +73,11 @@ if uploaded_file:
     if rec_filter:
         df_filtered = df[df['Recomendaciones'].apply(lambda recs: any(r in recs for r in rec_filter))]
         st.write(f"Mostrando {len(df_filtered)} registros que aplican a las recomendaciones seleccionadas.")
-        st.dataframe(df_filtered[['Power_kWh', 'CO2_per_kWh', 'Cost_per_kWh', 'Recomendaciones']])
+        st.dataframe(df_filtered[['Power_kWh', 'CO2_per_kWh', 'Cost_per_kWh', 'Recomendaciones', 'Semaforo']])
         st.metric("Promedio de consumo energético (kWh)", round(df_filtered['Power_kWh'].mean(), 2))
         st.metric("Promedio de emisiones CO2 (kg)", round(df_filtered['CO2_per_kWh'].mean(), 2))
         st.metric("Costo promedio por kWh", round(df_filtered['Cost_per_kWh'].mean(), 4))
+        st.markdown(f"**Distribución de eficiencia:**\n\n{df_filtered['Semaforo'].value_counts().to_frame().to_markdown()}")
     else:
         st.info("Selecciona uno o más tipos de recomendaciones para ver su impacto.")
 
@@ -73,4 +86,5 @@ if uploaded_file:
     st.download_button("Descargar resultados", csv, "resultados_eficiencia.csv", "text/csv")
 else:
     st.info("Por favor sube un archivo CSV para iniciar el análisis.")
+
 
